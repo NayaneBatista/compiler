@@ -1,0 +1,31 @@
+#incluir<stdio.h>
+#incluir<string.h>
+
+inteiro principal() {
+    inteiro a;
+    inteiro x=1;
+    inteiro y=2;
+    inteiro z=3;
+    x=3;
+    y=10;
+    z=5;
+    se(x>5) {
+        para(inteiro k=0; k<10; k++) {
+            y = x+3;
+            imprimir("Olá!");
+        }
+    } senao {
+        inteiro idx = 1;
+    }
+    para(inteiro i=0; i<10; i++) {
+        imprimir("Olá Mundo!");
+        ler("%d", &x);
+        se (x>5) {
+            imprimir("Oi");
+        }
+        para(inteiro j=0; j<z; j++) {
+            a=1;
+        }
+    } 
+    retornar 1;
+}
