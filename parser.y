@@ -1,3 +1,4 @@
+
 %{
     #include<stdio.h>
     #include<string.h>
@@ -23,10 +24,10 @@
     int count=0;
     int q;
     char type[10];
-    extern int line_count;
+    extern int countn;
 %}
 
-%token VOID CHARACTER PRINTFF SCANFF INT FLOAT CHAR FOR IF ELSE TRUE FALSE NUMBER FLOAT_NUMBER ID LE GE EQ NE GT LT AND OR STR ADD MULTIPLY DIVIDE SUB UNARY INCLUDE RETURN 
+%token VOID CHARACTER PRINTFF SCANFF INT FLOAT CHAR FOR IF ELSE TRUE FALSE NUMBER FLOAT_NUM ID LE GE EQ NE GT LT AND OR STR ADD MULTIPLY DIVIDE SUBTRACT UNARY INCLUDE RETURN 
 
 %%
 
@@ -80,7 +81,7 @@ expression: expression arithmetic expression
 ;
 
 arithmetic: ADD 
-| SUB
+| SUBTRACT 
 | MULTIPLY
 | DIVIDE
 ;
@@ -94,7 +95,7 @@ relop: LT
 ;
 
 value: NUMBER { add('C'); }
-| FLOAT_NUMBER { add('C'); }
+| FLOAT_NUM { add('C'); }
 | CHARACTER { add('C'); }
 | ID
 ;
@@ -108,8 +109,8 @@ return: RETURN { add('K'); } value ';'
 int main() {
   yyparse();
   printf("\n\n");
-	printf("\t\t\t\t\t\t\t\t FASE 1: ANALISE LEXICA \n\n");
-	printf("\nSIMBOLO   TIPO DE DADO   TIPO   LINHA \n");
+	printf("\t\t\t\t\t\t\t\t PHASE 1: LEXICAL ANALYSIS \n\n");
+	printf("\nSYMBOL   DATATYPE   TYPE   LINE NUMBER \n");
 	printf("_______________________________________\n\n");
 	int i=0;
 	for(i=0; i<count; i++) {
@@ -139,35 +140,35 @@ void add(char c) {
     if(c == 'H') {
 			symbol_table[count].id_name=strdup(yytext);
 			symbol_table[count].data_type=strdup(type);
-			symbol_table[count].line_no=line_count;
+			symbol_table[count].line_no=countn;
 			symbol_table[count].type=strdup("Header");
 			count++;
 		}
 		else if(c == 'K') {
 			symbol_table[count].id_name=strdup(yytext);
 			symbol_table[count].data_type=strdup("N/A");
-			symbol_table[count].line_no=line_count;
+			symbol_table[count].line_no=countn;
 			symbol_table[count].type=strdup("Keyword\t");
 			count++;
 		}
 		else if(c == 'V') {
 			symbol_table[count].id_name=strdup(yytext);
 			symbol_table[count].data_type=strdup(type);
-			symbol_table[count].line_no=line_count;
+			symbol_table[count].line_no=countn;
 			symbol_table[count].type=strdup("Variable");
 			count++;
 		}
 		else if(c == 'C') {
 			symbol_table[count].id_name=strdup(yytext);
 			symbol_table[count].data_type=strdup("CONST");
-			symbol_table[count].line_no=line_count;
+			symbol_table[count].line_no=countn;
 			symbol_table[count].type=strdup("Constant");
 			count++;
 		}
 		else if(c == 'F') {
 			symbol_table[count].id_name=strdup(yytext);
 			symbol_table[count].data_type=strdup(type);
-			symbol_table[count].line_no=line_count;
+			symbol_table[count].line_no=countn;
 			symbol_table[count].type=strdup("Function");
 			count++;
 		}
