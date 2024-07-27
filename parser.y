@@ -6,39 +6,49 @@
     #include<ctype.h>
     #include"lex.yy.c"
     
-    void yyerror(const char *s);
     int yylex();
     int yywrap();
-    void add(char);
+		int search(char *);
+    
+		void add(char);
     void insert_type();
-    int search(char *);
-    void insert_type();
+		void yyerror(const char *s);
 
     struct dataType {
         char * id_name;
         char * data_type;
         char * type;
-        int line_no;
+        int line_num;
     } symbol_table[40];
 
-    int count=0;
-    int q;
+    int symbolTableIndex=0;
+    int identifierExists;
     char type[10];
     extern int countn;
 %}
 
-%token VOID CHARACTER PRINTFF SCANFF INT FLOAT CHAR FOR IF ELSE TRUE FALSE NUMBER FLOAT_NUM ID LE GE EQ NE GT LT AND OR STR ADD MULTIPLY DIVIDE SUBTRACT UNARY INCLUDE RETURN 
+%token PRINTFF SCANFF INT FLOAT CHAR VOID RETURN IF ELSE FOR INCLUDE TRUE FALSE NUMBER FLOAT_NUMBER ID UNARY LE GE EQ NE GT LT AND OR ADD SUBTRACT MULTIPLY DIVIDE COMMA LBRACKET RBRACKET LPARENTHESIS RPARENTHESIS STRING CHARACTER
 
 %%
 
-program: headers main '(' ')' '{' body return '}'
+programa: headers principal '(' ')' '{' corpo retorno '}'
+| headers funcao { add('F'); }
+| programa funcao { add('F'); }
 ;
 
-headers: headers headers
-| INCLUDE { add('H'); }
+headers: INCLUDE { add('H'); }
+| headers INCLUDE { add('H'); }
 ;
 
-main: datatype ID { add('F'); }
+principal: datatype ID { add('F'); }
+;
+
+funcao: datatype ID '(' parametros ')' '{' corpo retorno '}'
+;
+
+parametros: datatype ID
+| parametros ',' datatype ID
+| 
 ;
 
 datatype: INT { insert_type(); }
@@ -47,60 +57,69 @@ datatype: INT { insert_type(); }
 | VOID { insert_type(); }
 ;
 
-body: FOR { add('K'); } '(' statement ';' condition ';' statement ')' '{' body '}'
-| IF { add('K'); } '(' condition ')' '{' body '}' else
-| statement ';'
-| body body 
-| PRINTFF { add('K'); } '(' STR ')' ';'
-| SCANFF { add('K'); } '(' STR ',' '&' ID ')' ';'
+corpo: FOR { add('K'); } '(' declaracao ';' condicao ';' declaracao ')' '{' corpo '}'
+| IF { add('K'); } '(' condicao ')' '{' corpo '}' senao
+| declaracao ';'
+| corpo corpo 
+| PRINTFF { add('K'); } '(' STRING ')' ';'
+| SCANFF { add('K'); } '(' STRING ',' '&' ID ')' ';'
 ;
 
-else: ELSE { add('K'); } '{' body '}'
+senao: ELSE { add('K'); } '{' corpo '}'
 |
 ;
 
-condition: value relop value 
+condicao: valor relop valor 
 | TRUE { add('K'); }
 | FALSE { add('K'); }
 |
 ;
 
-statement: datatype ID { add('V'); } init
-| ID '=' expression
-| ID relop expression
+declaracao: datatype ID { add('V'); } inicia
+| datatype ID '[' NUMBER ']' { add('V'); } inicia
+| ID '=' expressao
+| ID relop expressao
 | ID UNARY
 | UNARY ID
+| ID '[' expressao ']' '=' expressao
 ;
 
-init: '=' value
+inicia: '=' valor
 |
 ;
 
-expression: expression arithmetic expression
-| value
+expressao: expressao aritimetica expressao
+| valor
+| ID '[' expressao ']'
+| ID '(' argumentos ')'
 ;
 
-arithmetic: ADD 
+argumentos: expressao
+| argumentos ',' expressao
+|
+;
+
+aritimetica: ADD 
 | SUBTRACT 
 | MULTIPLY
 | DIVIDE
 ;
 
-relop: LT
-| GT
-| LE
+relop: LE
 | GE
 | EQ
 | NE
+| GT
+| LT
 ;
 
-value: NUMBER { add('C'); }
-| FLOAT_NUM { add('C'); }
+valor: NUMBER { add('C'); }
+| FLOAT_NUMBER { add('C'); }
 | CHARACTER { add('C'); }
 | ID
 ;
 
-return: RETURN { add('K'); } value ';'
+retorno: RETURN { add('K'); } valor ';'
 |
 ;
 
@@ -108,68 +127,84 @@ return: RETURN { add('K'); } value ';'
 
 int main() {
   yyparse();
-  printf("\n\n");
-	printf("\nSIMBOLO   TIPO DO DADO    TIPO    LINHA \n");
-	printf("_______________________________________\n\n");
-	int i=0;
-	for(i=0; i<count; i++) {
-		printf("%s\t%s\t%s\t%d\t\n", symbol_table[i].id_name, symbol_table[i].data_type, symbol_table[i].type, symbol_table[i].line_no);
+  
+	printf("\n\n");
+	printf("\nSIMBOLO			TIPO DO DADO			TIPO			LINHA \n");
+	printf("______________________________________________\n\n");
+	
+	int i = 0;
+	
+	for(i = 0; i < symbolTableIndex; i++) {
+		printf("%s\t%s\t%s\t%d\t\n", symbol_table[i].id_name, symbol_table[i].data_type, symbol_table[i].type, symbol_table[i].line_num);
 	}
-	for(i=0;i<count;i++) {
+
+	for(i = 0; i < symbolTableIndex; i++) {
 		free(symbol_table[i].id_name);
 		free(symbol_table[i].type);
 	}
+
 	printf("\n\n");
+
+	printf("Número de linhas: %d\n", countn);
+	return 0;
 }
 
 int search(char *type) {
 	int i;
-	for(i=count-1; i>=0; i--) {
+	
+	for(i = symbolTableIndex-1; i >= 0; i--) {
 		if(strcmp(symbol_table[i].id_name, type)==0) {
 			return -1;
 			break;
 		}
 	}
+	
 	return 0;
 }
 
-void add(char c) {
-  q=search(yytext);
-  if(!q) {
-    if(c == 'H') {
-			symbol_table[count].id_name=strdup(yytext);
-			symbol_table[count].data_type=strdup(type);
-			symbol_table[count].line_no=countn;
-			symbol_table[count].type=strdup("Header");
-			count++;
+void add(char tokenType) {
+  identifierExists = search(yytext);
+  
+	if(!identifierExists) {
+
+    if(tokenType == 'H') {
+			symbol_table[symbolTableIndex].id_name=strdup(yytext);
+			symbol_table[symbolTableIndex].data_type=strdup(type);
+			symbol_table[symbolTableIndex].line_num=countn;
+			symbol_table[symbolTableIndex].type=strdup("Header");
+			symbolTableIndex++;
 		}
-		else if(c == 'K') {
-			symbol_table[count].id_name=strdup(yytext);
-			symbol_table[count].data_type=strdup("N/A");
-			symbol_table[count].line_no=countn;
-			symbol_table[count].type=strdup("Keyword\t");
-			count++;
+		
+		else if(tokenType == 'K') {
+			symbol_table[symbolTableIndex].id_name=strdup(yytext);
+			symbol_table[symbolTableIndex].data_type=strdup("N/A");
+			symbol_table[symbolTableIndex].line_num=countn;
+			symbol_table[symbolTableIndex].type=strdup("Keyword\t");
+			symbolTableIndex++;
 		}
-		else if(c == 'V') {
-			symbol_table[count].id_name=strdup(yytext);
-			symbol_table[count].data_type=strdup(type);
-			symbol_table[count].line_no=countn;
-			symbol_table[count].type=strdup("Variable");
-			count++;
+		
+		else if(tokenType == 'V') {
+			symbol_table[symbolTableIndex].id_name=strdup(yytext);
+			symbol_table[symbolTableIndex].data_type=strdup(type);
+			symbol_table[symbolTableIndex].line_num=countn;
+			symbol_table[symbolTableIndex].type=strdup("Variable");
+			symbolTableIndex++;
 		}
-		else if(c == 'C') {
-			symbol_table[count].id_name=strdup(yytext);
-			symbol_table[count].data_type=strdup("CONST");
-			symbol_table[count].line_no=countn;
-			symbol_table[count].type=strdup("Constant");
-			count++;
+		
+		else if(tokenType == 'C') {
+			symbol_table[symbolTableIndex].id_name=strdup(yytext);
+			symbol_table[symbolTableIndex].data_type=strdup("CONST");
+			symbol_table[symbolTableIndex].line_num=countn;
+			symbol_table[symbolTableIndex].type=strdup("Constant");
+			symbolTableIndex++;
 		}
-		else if(c == 'F') {
-			symbol_table[count].id_name=strdup(yytext);
-			symbol_table[count].data_type=strdup(type);
-			symbol_table[count].line_no=countn;
-			symbol_table[count].type=strdup("Function");
-			count++;
+		
+		else if(tokenType == 'F') {
+			symbol_table[symbolTableIndex].id_name=strdup(yytext);
+			symbol_table[symbolTableIndex].data_type=strdup(type);
+			symbol_table[symbolTableIndex].line_num=countn;
+			symbol_table[symbolTableIndex].type=strdup("Function");
+			symbolTableIndex++;
 		}
 	}
 }
@@ -178,6 +213,6 @@ void insert_type() {
 	strcpy(type, yytext);
 }
 
-void yyerror(const char* msg) {
-  fprintf(stderr, "%s\n", msg);
+void yyerror(const char *s) {
+  fprintf(stderr, "Erro na linha %d: %s\n", yylineno, s);
 }

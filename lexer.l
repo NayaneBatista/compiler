@@ -1,6 +1,7 @@
 %{
     #include "y.tab.h"
     int countn=0;
+    extern int yylineno;
 %}
 
 %option yylineno
@@ -18,14 +19,14 @@ unary "++"|"--"
 "caractere"                 { return CHAR; }
 "vazio"                     { return VOID; }
 "retornar"                  { return RETURN; }
-"para"	                    { return FOR; }
 "se"	                    { return IF; }
 "senao"	                    { return ELSE; }
+"para"	                    { return FOR; }
 ^"#incluir"[ ]*<.+\.h>      { return INCLUDE; }
 "verdadeiro"                { return TRUE; }
 "falso"                     { return FALSE; }
 [-]?{digit}+                { return NUMBER; }
-[-]?{digit}+\.{digit}{1,6}  { return FLOAT_NUM; }
+[-]?{digit}+\.{digit}{1,4}  { return FLOAT_NUMBER; }
 {alpha}({alpha}|{digit})*   { return ID; }
 {unary}                     { return UNARY; }
 "<="                        { return LE; }
@@ -38,14 +39,19 @@ unary "++"|"--"
 "||"	                    { return OR; }
 "+"                         { return ADD; }
 "-"                         { return SUBTRACT; }
-"/"                         { return DIVIDE; }
 "*"                         { return MULTIPLY; }
+"/"                         { return DIVIDE; }
+","                         { return COMMA; }
+"["                         { return LBRACKET; }
+"]"                         { return RBRACKET; }
+"("                         { return LPARENTHESIS; }
+")"                         { return RPARENTHESIS; }
 \/\/.*                      { ; }
 \/\*(.*\n)*.*\*\/           { ; } 
 [ \t]*                      { ; }
 [\n]                        { countn++; }
 .	                        { return *yytext; }
-["].*["]                    { return STR; }
+["].*["]                    { return STRING; }
 ['].[']                     { return CHARACTER; }
 
 %%
