@@ -41,11 +41,6 @@ unary "++"|"--"
 "-"                         { return SUBTRACT; }
 "*"                         { return MULTIPLY; }
 "/"                         { return DIVIDE; }
-","                         { return COMMA; }
-"["                         { return LBRACKET; }
-"]"                         { return RBRACKET; }
-"("                         { return LPARENTHESIS; }
-")"                         { return RPARENTHESIS; }
 \/\/.*                      { ; }
 \/\*(.*\n)*.*\*\/           { ; } 
 [ \t]*                      { ; }
