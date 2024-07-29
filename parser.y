@@ -129,12 +129,16 @@ int main() {
   
 	printf("\n\n");
 	printf("\nSIMBOLO			TIPO DO DADO			TIPO			LINHA \n");
-	printf("______________________________________________\n\n");
+	printf("___________________________________________________________________________________________\n\n");
 	
 	int i = 0;
 	
 	for(i = 0; i < symbolTableIndex; i++) {
-		printf("%s\t%s\t%s\t%d\t\n", symbol_table[i].id_name, symbol_table[i].data_type, symbol_table[i].type, symbol_table[i].line_num);
+		printf("%-20s\t%-20s\t%-20s\t%5d\t\n",
+						symbol_table[i].id_name,
+						symbol_table[i].data_type,
+						symbol_table[i].type,
+						symbol_table[i].line_num);
 	}
 
 	for(i = 0; i < symbolTableIndex; i++) {
@@ -178,7 +182,7 @@ void add(char tokenType) {
 			symbol_table[symbolTableIndex].id_name=strdup(yytext);
 			symbol_table[symbolTableIndex].data_type=strdup("N/A");
 			symbol_table[symbolTableIndex].line_num=countn;
-			symbol_table[symbolTableIndex].type=strdup("Keyword\t");
+			symbol_table[symbolTableIndex].type=strdup("Palavra-chave\t");
 			symbolTableIndex++;
 		}
 		
@@ -186,7 +190,7 @@ void add(char tokenType) {
 			symbol_table[symbolTableIndex].id_name=strdup(yytext);
 			symbol_table[symbolTableIndex].data_type=strdup(type);
 			symbol_table[symbolTableIndex].line_num=countn;
-			symbol_table[symbolTableIndex].type=strdup("Variable");
+			symbol_table[symbolTableIndex].type=strdup("Variavel");
 			symbolTableIndex++;
 		}
 		
@@ -194,7 +198,7 @@ void add(char tokenType) {
 			symbol_table[symbolTableIndex].id_name=strdup(yytext);
 			symbol_table[symbolTableIndex].data_type=strdup("CONST");
 			symbol_table[symbolTableIndex].line_num=countn;
-			symbol_table[symbolTableIndex].type=strdup("Constant");
+			symbol_table[symbolTableIndex].type=strdup("Constante");
 			symbolTableIndex++;
 		}
 		
@@ -202,7 +206,7 @@ void add(char tokenType) {
 			symbol_table[symbolTableIndex].id_name=strdup(yytext);
 			symbol_table[symbolTableIndex].data_type=strdup(type);
 			symbol_table[symbolTableIndex].line_num=countn;
-			symbol_table[symbolTableIndex].type=strdup("Function");
+			symbol_table[symbolTableIndex].type=strdup("Funcao");
 			symbolTableIndex++;
 		}
 	}
