@@ -1,53 +1,60 @@
+// parser.y
 %{
     #include<stdio.h>
     #include<string.h>
     #include<stdlib.h>
     #include<ctype.h>
     #include"lex.yy.c"
-    
+    void yyerror(const char *s);
     int yylex();
     int yywrap();
-		int search(char *);
-    
-		void add(char);
+    void add(char);
     void insert_type();
-		void yyerror(const char *s);
+    int search(char *);
+    void insert_type();
+    void printtree(struct node*);
+    void printInorder(struct node *, FILE *);
+    struct node* mknode(struct node *left, struct node *right, char *token);
 
     struct dataType {
         char * id_name;
         char * data_type;
         char * type;
-        int line_num;
-    } symbol_table[40];
-
-    int symbolTableIndex=0;
-    int identifierExists;
+        int line_no;
+    } symbolTable[40];
+    int count=0;
+    int q;
     char type[10];
     extern int countn;
+    struct node *head;
+    struct node { 
+	struct node *left; 
+	struct node *right; 
+	char *token; 
+    };
 %}
 
-%token PRINTFF SCANFF INT FLOAT CHAR VOID RETURN IF ELSE FOR INCLUDE TRUE FALSE NUMBER FLOAT_NUMBER ID UNARY LE GE EQ NE GT LT AND OR ADD SUBTRACT MULTIPLY DIVIDE STRING CHARACTER
+%union { 
+	struct var_name { 
+		char name[100]; 
+		struct node* nd;
+	} nd_obj; 
+} 
+
+%token VOID 
+%token <nd_obj> CHARACTER PRINTF SCANF INT FLOAT CHAR FOR IF ELSE TRUE FALSE NUMBER FLOAT_NUM ID LE GE EQ NE GT LT AND OR STR ADD MULTIPLY DIVIDE SUBTRACT UNARY INCLUDE RETURN 
+%type <nd_obj> headers main body return datatype expression statement init value arithmetic relop program condition else
 
 %%
 
-programa: headers principal '(' ')' '{' corpo retorno '}'
-| headers funcao { add('F'); }
-| programa funcao { add('F'); }
+program: headers main '(' ')' '{' body return '}' { $2.nd = mknode($6.nd, $7.nd, "principal"); $$.nd = mknode($1.nd, $2.nd, "programa"); head = $$.nd; } 
 ;
 
-headers: INCLUDE { add('H'); }
-| headers INCLUDE { add('H'); }
+headers: INCLUDE { add('H'); } { $$.nd = mknode(NULL, NULL, $1.name); }
+| headers INCLUDE { add('H'); } { $2.nd = mknode(NULL, NULL, $2.name); $$.nd = mknode($1.nd, $2.nd, "headers"); } 
 ;
 
-principal: datatype ID { add('F'); }
-;
-
-funcao: datatype ID '(' parametros ')' '{' corpo retorno '}'
-;
-
-parametros: datatype ID
-| parametros ',' datatype ID
-| 
+main: datatype ID { add('K'); }
 ;
 
 datatype: INT { insert_type(); }
@@ -56,160 +63,172 @@ datatype: INT { insert_type(); }
 | VOID { insert_type(); }
 ;
 
-corpo: FOR { add('K'); } '(' declaracao ';' condicao ';' declaracao ')' '{' corpo '}'
-| IF { add('K'); } '(' condicao ')' '{' corpo '}' senao
-| declaracao ';'
-| corpo corpo 
-| PRINTFF { add('K'); } '(' STRING ')' ';'
-| SCANFF { add('K'); } '(' STRING ',' '&' ID ')' ';'
+body: FOR { add('K'); } '(' statement ';' condition ';' statement ')' '{' body '}' { struct node *temp = mknode($6.nd, $8.nd, "CONDICAO"); struct node *temp2 = mknode($4.nd, temp, "CONDICAO"); $$.nd = mknode(temp2, $11.nd, $1.name); }
+| IF { add('K'); } '(' condition ')' '{' body '}' else { struct node *iff = mknode($4.nd, $7.nd, $1.name); 	$$.nd = mknode(iff, $9.nd, "se-senao"); }
+| statement ';' { $$.nd = $1.nd; }
+| body body { $$.nd = mknode($1.nd, $2.nd, "statements"); }
+| PRINTF { add('K'); } '(' STR ')' ';' { $$.nd = mknode(NULL, NULL, "imprimir"); }
+| SCANF { add('K'); } '(' STR ',' '&' ID ')' ';' { $$.nd = mknode(NULL, NULL, "ler"); }
 ;
 
-senao: ELSE { add('K'); } '{' corpo '}'
-|
+else: ELSE { add('K'); } '{' body '}' { $$.nd = mknode(NULL, $4.nd, $1.name); }
+| { $$.nd = NULL; }
 ;
 
-condicao: valor relop valor 
-| TRUE { add('K'); }
-| FALSE { add('K'); }
-|
+condition: value relop value { $$.nd = mknode($1.nd, $3.nd, $2.name); }
+| TRUE { add('K'); $$.nd = NULL; }
+| FALSE { add('K'); $$.nd = NULL; }
+| { $$.nd = NULL; }
 ;
 
-declaracao: datatype ID { add('V'); } inicia
-| datatype ID '[' NUMBER ']' { add('V'); } inicia
-| ID '=' expressao
-| ID relop expressao
-| ID UNARY
-| UNARY ID
-| ID '[' expressao ']' '=' expressao
+statement: datatype ID { add('V'); } init { $2.nd = mknode(NULL, NULL, $2.name); $$.nd = mknode($2.nd, $4.nd, "declaracao"); }
+| ID '=' expression { $1.nd = mknode(NULL, NULL, $1.name); $$.nd = mknode($1.nd, $3.nd, "="); }
+| ID relop expression { $1.nd = mknode(NULL, NULL, $1.name); $$.nd = mknode($1.nd, $3.nd, $2.name); }
+| ID UNARY { $1.nd = mknode(NULL, NULL, $1.name); $2.nd = mknode(NULL, NULL, $2.name); $$.nd = mknode($1.nd, $2.nd, "ITERADOR"); }
+| UNARY ID { $1.nd = mknode(NULL, NULL, $1.name); $2.nd = mknode(NULL, NULL, $2.name); $$.nd = mknode($1.nd, $2.nd, "ITERADOR"); }
 ;
 
-inicia: '=' valor
-|
+init: '=' value { $$.nd = $2.nd; }
+| { $$.nd = mknode(NULL, NULL, "NULL"); }
 ;
 
-expressao: expressao aritimetica expressao
-| valor
-| ID '[' expressao ']'
-| ID '(' argumentos ')'
+expression: expression arithmetic expression { $$.nd = mknode($1.nd, $3.nd, $2.name); }
+| value { $$.nd = $1.nd; }
 ;
 
-argumentos: expressao
-| argumentos ',' expressao
-|
-;
-
-aritimetica: ADD 
+arithmetic: ADD 
 | SUBTRACT 
 | MULTIPLY
 | DIVIDE
 ;
 
-relop: LE
+relop: LT
+| GT
+| LE
 | GE
 | EQ
 | NE
-| GT
-| LT
 ;
 
-valor: NUMBER { add('C'); }
-| FLOAT_NUMBER { add('C'); }
-| CHARACTER { add('C'); }
-| ID
+value: NUMBER { add('C'); $$.nd = mknode(NULL, NULL, $1.name); }
+| FLOAT_NUM { add('C'); $$.nd = mknode(NULL, NULL, $1.name); }
+| CHARACTER { add('C'); $$.nd = mknode(NULL, NULL, $1.name); }
+| ID { $$.nd = mknode(NULL, NULL, $1.name); }
 ;
 
-retorno: RETURN { add('K'); } valor ';'
-|
+return: RETURN { add('K'); } value ';' { $1.nd = mknode(NULL, NULL, "return"); $$.nd = mknode($1.nd, $3.nd, "RETORNO"); }
+| { $$.nd = NULL; }
 ;
 
 %%
 
 int main() {
-  yyparse();
-  
-	printf("\n\n");
+    yyparse();
+
+    printf("\n\n");
 	printf("\nSIMBOLO			TIPO DO DADO			TIPO			LINHA \n");
 	printf("___________________________________________________________________________________________\n\n");
-	
-	int i = 0;
-	
-	for(i = 0; i < symbolTableIndex; i++) {
-		printf("%-20s\t%-20s\t%-20s\t%5d\t\n",
-						symbol_table[i].id_name,
-						symbol_table[i].data_type,
-						symbol_table[i].type,
-						symbol_table[i].line_num);
-	}
 
-	for(i = 0; i < symbolTableIndex; i++) {
-		free(symbol_table[i].id_name);
-		free(symbol_table[i].type);
+	int i=0;
+	for(i=0; i<count; i++) {
+		printf("%-20s\t%-20s\t%-20s\t%5d\t\n", symbolTable[i].id_name, symbolTable[i].data_type, symbolTable[i].type, symbolTable[i].line_no + 1);
 	}
-
+	for(i=0;i<count;i++){
+		free(symbolTable[i].id_name);
+		free(symbolTable[i].type);
+	}
 	printf("\n\n");
-
-	printf("Número de linhas: %d\n", countn);
-	return 0;
+	printtree(head); 
+	printf("\n\n");
 }
 
 int search(char *type) {
 	int i;
-	
-	for(i = symbolTableIndex-1; i >= 0; i--) {
-		if(strcmp(symbol_table[i].id_name, type)==0) {
+	for(i=count-1; i>=0; i--) {
+		if(strcmp(symbolTable[i].id_name, type)==0) {
 			return -1;
 			break;
 		}
 	}
-	
 	return 0;
 }
 
-void add(char tokenType) {
-  identifierExists = search(yytext);
-  
-	if(!identifierExists) {
+void add(char c) {
+    q=search(yytext);
+	if(q==0) {
+		if(c=='H') {
+			symbolTable[count].id_name=strdup(yytext);
+			symbolTable[count].data_type=strdup(type);
+			symbolTable[count].line_no=countn;
+			symbolTable[count].type=strdup("Header");
+			count++;
+		}
+		else if(c=='K') {
+			symbolTable[count].id_name=strdup(yytext);
+			symbolTable[count].data_type=strdup("N/A");
+			symbolTable[count].line_no=countn;
+			symbolTable[count].type=strdup("Palavra-chave\t");
+			count++;
+		}
+		else if(c=='V') {
+			symbolTable[count].id_name=strdup(yytext);
+			symbolTable[count].data_type=strdup(type);
+			symbolTable[count].line_no=countn;
+			symbolTable[count].type=strdup("Variável");
+			count++;
+		}
+		else if(c=='C') {
+			symbolTable[count].id_name=strdup(yytext);
+			symbolTable[count].data_type=strdup("CONST");
+			symbolTable[count].line_no=countn;
+			symbolTable[count].type=strdup("Constante");
+			count++;
+		}
+    }
+}
 
-    if(tokenType == 'H') {
-			symbol_table[symbolTableIndex].id_name=strdup(yytext);
-			symbol_table[symbolTableIndex].data_type=strdup(type);
-			symbol_table[symbolTableIndex].line_num=countn;
-			symbol_table[symbolTableIndex].type=strdup("Header");
-			symbolTableIndex++;
-		}
-		
-		else if(tokenType == 'K') {
-			symbol_table[symbolTableIndex].id_name=strdup(yytext);
-			symbol_table[symbolTableIndex].data_type=strdup("N/A");
-			symbol_table[symbolTableIndex].line_num=countn;
-			symbol_table[symbolTableIndex].type=strdup("Palavra-chave\t");
-			symbolTableIndex++;
-		}
-		
-		else if(tokenType == 'V') {
-			symbol_table[symbolTableIndex].id_name=strdup(yytext);
-			symbol_table[symbolTableIndex].data_type=strdup(type);
-			symbol_table[symbolTableIndex].line_num=countn;
-			symbol_table[symbolTableIndex].type=strdup("Variavel");
-			symbolTableIndex++;
-		}
-		
-		else if(tokenType == 'C') {
-			symbol_table[symbolTableIndex].id_name=strdup(yytext);
-			symbol_table[symbolTableIndex].data_type=strdup("CONST");
-			symbol_table[symbolTableIndex].line_num=countn;
-			symbol_table[symbolTableIndex].type=strdup("Constante");
-			symbolTableIndex++;
-		}
-		
-		else if(tokenType == 'F') {
-			symbol_table[symbolTableIndex].id_name=strdup(yytext);
-			symbol_table[symbolTableIndex].data_type=strdup(type);
-			symbol_table[symbolTableIndex].line_num=countn;
-			symbol_table[symbolTableIndex].type=strdup("Funcao");
-			symbolTableIndex++;
-		}
-	}
+struct node* mknode(struct node *left, struct node *right, char *token) {	
+	struct node *newnode = (struct node *)malloc(sizeof(struct node));
+	char *newstr = (char *)malloc(strlen(token)+1);
+	strcpy(newstr, token);
+	newnode->left = left;
+	newnode->right = right;
+	newnode->token = newstr;
+	return(newnode);
+}
+
+void printInorder(struct node *tree, FILE *file) {
+    if (tree == NULL) {
+        fprintf(file, "null");
+        return;
+    }
+
+    fprintf(file, "{\n");
+    
+    fprintf(file, "  \"token\": \"%s\",\n", tree->token);
+    
+    fprintf(file, "  \"left\": ");
+    printInorder(tree->left, file);
+    fprintf(file, ",\n");
+    
+    fprintf(file, "  \"right\": ");
+    printInorder(tree->right, file);
+    
+    fprintf(file, "\n}");
+}
+
+void printtree(struct node* tree) {
+    FILE *file = fopen("arvore_sintatica.json", "w");
+    if (file == NULL) {
+        fprintf(stderr, "Erro ao abrir o arquivo!\n");
+        return;
+    }
+
+    printInorder(tree, file);
+    fprintf(file, "\n");
+
+    fclose(file);
+    printf("Abstract Syntax Tree salva em 'arvore_sintatica.json'.\n");
 }
 
 void insert_type() {
@@ -217,5 +236,6 @@ void insert_type() {
 }
 
 void yyerror(const char *s) {
-  fprintf(stderr, "Erro na linha %d: %s\n", yylineno, s);
+  fprintf(stderr, "\nErro na linha %d: %s\n", yylineno, s);
+  exit(1);
 }
