@@ -336,7 +336,7 @@ statement:
     | ID '(' parameter_list ')' {
         char *id_type = get_type($1.name);
         if (strcmp(id_type, "desconhecido") == 0) {
-            sprintf(errors[sem_errors], "Line %d: Function \"%s\" not declared before usage!\n", countn + 1, $1.name);
+            sprintf(errors[sem_errors], "Linha %d: Funcao \"%s\" nao declarada antes do uso!\n", countn + 1, $1.name);
             sem_errors++;
         }
         $$.nd = mknode($1.nd, $3.nd, "chamada_funcao");
