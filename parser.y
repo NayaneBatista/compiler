@@ -485,12 +485,12 @@ int main() {
     printf("\n\n");
     printtree(head);
     if (sem_errors > 0) {
-        printf("Semantic analysis completed with %d errors\n", sem_errors);
+        printf("Analise semantica completa com %d erros\n", sem_errors);
         for (int i = 0; i < sem_errors; i++) {
             printf("\t - %s", errors[i]);
         }
     } else {
-        printf("Semantic analysis completed with no errors");
+        printf("Analise semantica completa sem erros");
     }
     printf("\n\n");
 }
@@ -508,7 +508,7 @@ int search(char *type) {
 void check_declaration(char *c) {
     q = search(c);
     if (!q) {
-        sprintf(errors[sem_errors], "Line %d: Variable \"%s\" not declared before usage!\n", countn + 1, c);
+        sprintf(errors[sem_errors], "Linha %d: Variavel \"%s\" nao declarada antes do uso!\n", countn + 1, c);
         sem_errors++;
     }
 }
@@ -520,7 +520,7 @@ void check_return_type(char *value) {
 
     if (strcmp(main_datatype, "desconhecido") == 0 || 
         strcmp(return_datatype, "desconhecido") == 0) {
-        sprintf(errors[sem_errors], "Line %d: Tipo de retorno ou tipo de função principal não encontrado\n", countn + 1);
+        sprintf(errors[sem_errors], "Linha %d: Tipo de retorno ou tipo de função principal não encontrado\n", countn + 1);
         sem_errors++;
         return;
     }
@@ -529,7 +529,7 @@ void check_return_type(char *value) {
         strcmp(main_datatype, return_datatype) == 0) {
         return;
     } else {
-        sprintf(errors[sem_errors], "Line %d: Tipos de retorno incompatíveis\n", countn + 1);
+        sprintf(errors[sem_errors], "Linha %d: Tipos de retorno incompatíveis\n", countn + 1);
         sem_errors++;
     }
 }
