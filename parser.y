@@ -605,7 +605,7 @@ void add(char c) {
     if (c == 'V') {
         for (int i = 0; i < 10; i++) {
             if (!strcmp(reserved[i], strdup(yytext))) {
-                sprintf(errors[sem_errors], "Line %d: Variable name \"%s\" is a reserved keyword!\n", countn + 1, yytext);
+                sprintf(errors[sem_errors], "Linha %d: Nome da variavel \"%s\" eh uma palavra reservada!\n", countn + 1, yytext);
                 sem_errors++;
                 return;
             }
