@@ -88,6 +88,9 @@ headers:
         $2.nd = mknode(NULL, NULL, $2.name);
         $$.nd = mknode($1.nd, $2.nd, "headers");
     }
+    | {
+        $$.nd = NULL;
+    }
 ;
 
 main:
