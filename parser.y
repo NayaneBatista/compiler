@@ -1,52 +1,53 @@
 %{
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include "lex.yy.c"
+    #include <stdio.h>
+    #include <string.h>
+    #include <stdlib.h>
+    #include <ctype.h>
+    #include "lex.yy.c"
 
-void yyerror(const char *s);
-int yylex();
-int yywrap();
-void add(char);
-void insert_type();
-int search(char *);
-void insert_type();
-void printtree(struct node*);
-void printInorder(struct node *, FILE *);
-void check_declaration(char *);
-void check_return_type(char *);
-int check_types(char *, char *);
-char *get_type(char *);
+    void yyerror(const char *s);
+    int yylex();
+    int yywrap();
+    void add(char);
+    void insert_type();
+    int search(char *);
+    void insert_type();
+    void printtree(struct node*);
+    void printInorder(struct node *, FILE *);
+    void check_declaration(char *);
+    void check_return_type(char *);
+    int check_types(char *, char *);
+    char *get_type(char *);
+    int check_data_type(struct node *node);
 
-struct node* mknode(struct node *left, struct node *right, char *token);
+    struct node* mknode(struct node *left, struct node *right, char *token);
 
-struct dataType {
-    char *id_name;
-    char *data_type;
-    char *type;
-    int line_no;
-} symbolTable[40];
+    struct dataType {
+        char *id_name;
+        char *data_type;
+        char *type;
+        int line_no;
+    } symbolTable[40];
 
-int count = 0;
-int q;
-char type[10];
-extern int countn;
-struct node *head;
-int sem_errors = 0;
-int label = 0;
+    int count = 0;
+    int q;
+    char type[10];
+    extern int countn;
+    struct node *head;
+    int sem_errors = 0;
+    int label = 0;
 
-char buff[100];
-char errors[10][100];
-char reserved[10][10] = {
-    "inteiro", "flutuante", "caractere", "vazio", "se", "senao", "para", "principal", "retorno", "incluir"
-};
+    char buff[100];
+    char errors[10][100];
+    char reserved[10][10] = {
+        "inteiro", "flutuante", "caractere", "vazio", "se", "senao", "para", "principal", "retorno", "incluir"
+    };
 
-struct node {
-    struct node *left;
-    struct node *right;
-    char *token;
-};
+    struct node {
+        struct node *left;
+        struct node *right;
+        char *token;
+    };
 %}
 
 %union {
@@ -63,8 +64,8 @@ struct node {
 }
 
 %token VOID
-%token <nd_obj> CHARACTER PRINTF SCANF INT FLOAT CHAR FOR IF ELSE TRUE FALSE NUMBER FLOAT_NUMBER ID LE GE EQ NE GT LT AND OR STRING ADD MULTIPLY DIVIDE SUBTRACT UNARY INCLUDE RETURN
-%type <nd_obj> headers main body return datatype statement arithmetic relop program condition else
+%token <nd_obj> CHARACTER PRINTF SCANF INT FLOAT CHAR FOR IF ELSE TRUE FALSE NUMBER FLOAT_NUMBER ID LE GE EQ NE GT LT STRING ADD MULTIPLY DIVIDE SUBTRACT UNARY INCLUDE RETURN
+%type <nd_obj> headers main body return datatype statement arithmetic relop program condition else array_declaration function_declaration parameter_list
 %type <nd_obj2> init value expression
 
 %%
@@ -124,6 +125,7 @@ body:
         struct node *iff = mknode($4.nd, $7.nd, $1.name);
         $$.nd = mknode(iff, $9.nd, "se-senao");
     }
+    | function_declaration
     | statement ';' {
         $$.nd = $1.nd;
     }
@@ -170,6 +172,33 @@ condition:
     }
 ;
 
+function_declaration:
+    datatype ID '(' parameter_list ')' '{' body '}' { 
+        if (!check_data_type($2.nd)) {
+        }
+        $$.nd = mknode($2.nd, $7.nd, $2.name); 
+    }
+    | VOID ID '(' parameter_list ')' '{' body '}' { 
+        if (!check_data_type($2.nd)) {
+        }
+
+        $$.nd = mknode($2.nd, $7.nd, $2.name); 
+    }
+;
+
+parameter_list:
+    datatype ID
+    | parameter_list ',' datatype ID
+;
+
+array_declaration:
+    datatype ID '[' NUMBER ']' { 
+        add('V');
+        $1.nd = mknode(NULL, NULL, $1.name);
+        $$.nd = mknode($1.nd, $2.nd, "array_declaration"); 
+    }
+;
+
 statement:
     datatype ID {
         add('V');
@@ -206,6 +235,41 @@ statement:
         }
         else {
             $$.nd = mknode($2.nd, $4.nd, "declaration");
+        }
+    }
+    | array_declaration init {
+        $2.nd = mknode(NULL, NULL, $2.name);
+
+        int t = check_types($1.name, $2.type);
+
+        if (t > 0) {
+            if (t == 1) {
+                struct node *temp = mknode(NULL, $2.nd, "floattoint");
+                $$.nd = mknode($2.nd, temp, "declaration");
+            }
+            else if (t == 2) {
+                struct node *temp = mknode(NULL, $2.nd, "inttofloat");
+                $$.nd = mknode($2.nd, temp, "declaration");
+            }
+            else if (t == 3) {
+                struct node *temp = mknode(NULL, $2.nd, "chartoint");
+                $$.nd = mknode($2.nd, temp, "declaration");
+            }
+            else if (t == 4) {
+                struct node *temp = mknode(NULL, $2.nd, "inttochar");
+                $$.nd = mknode($2.nd, temp, "declaration");
+            }
+            else if (t == 5) {
+                struct node *temp = mknode(NULL, $2.nd, "chartofloat");
+                $$.nd = mknode($2.nd, temp, "declaration");
+            }
+            else {
+                struct node *temp = mknode(NULL, $2.nd, "floattochar");
+                $$.nd = mknode($2.nd, temp, "declaration");
+            }
+        }
+        else {
+            $$.nd = mknode($2.nd, $2.nd, "declaration");
         }
     }
     | ID {
@@ -268,6 +332,14 @@ statement:
         $1.nd = mknode(NULL, NULL, $1.name);
         $2.nd = mknode(NULL, NULL, $2.name);
         $$.nd = mknode($1.nd, $2.nd, "ITERATOR");
+    }
+    | ID '(' parameter_list ')' {
+        char *id_type = get_type($1.name);
+        if (strcmp(id_type, "desconhecido") == 0) {
+            sprintf(errors[sem_errors], "Line %d: Function \"%s\" not declared before usage!\n", countn + 1, $1.name);
+            sem_errors++;
+        }
+        $$.nd = mknode($1.nd, $3.nd, "chamada_funcao");
     }
 ;
 
@@ -372,6 +444,10 @@ value:
         check_declaration($1.name);
         $$.nd = mknode(NULL, NULL, $1.name);
     }
+    | ID '[' expression ']' {
+        check_declaration($1.name);
+        $$.nd = mknode($1.nd, $3.nd, "array_access"); 
+    }
 ;
 
 return:
@@ -393,7 +469,7 @@ int main() {
     yyparse();
 
     printf("\n\n");
-    printf("\nSIMBOLO\t\t\tTIPO DO DADO\t\tTIPO\t\tLINHA\n");
+    printf("\nSIMBOLO\t\t\tTIPO DO DADO\t\tCATEGORIA\t\tLINHA\n");
     printf("___________________________________________________________________________________________\n\n");
 
     int i = 0;
@@ -438,10 +514,10 @@ void check_declaration(char *c) {
 }
 
 void check_return_type(char *value) {
-    char *main_datatype = get_type("principal"); // "principal", não "main"
+    char *main_datatype = get_type("principal");
     char *return_datatype = get_type(value);
 
-    // Verifica se ambos os tipos foram encontrados
+
     if (strcmp(main_datatype, "desconhecido") == 0 || 
         strcmp(return_datatype, "desconhecido") == 0) {
         sprintf(errors[sem_errors], "Line %d: Tipo de retorno ou tipo de função principal não encontrado\n", countn + 1);
@@ -458,18 +534,28 @@ void check_return_type(char *value) {
     }
 }
 
+int check_data_type(struct node *node) {
+    char *datatype = node->token; 
+
+    if (strcmp(datatype, "int") == 0 ||
+        strcmp(datatype, "float") == 0 ||
+        strcmp(datatype, "char") == 0 ||
+        strcmp(datatype, "void") == 0) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
 int check_types(char *type1, char *type2) {
-    // declaration with no init
     if (!strcmp(type2, "null")) {
         return -1;
     }
 
-    // both datatypes are same
     if (!strcmp(type1, type2)) {
         return 0;
     }
 
-    // both datatypes are different
     if (!strcmp(type1, "int") && !strcmp(type2, "float")) {
         return 1;
     }
@@ -488,6 +574,18 @@ int check_types(char *type1, char *type2) {
     if (!strcmp(type1, "char") && !strcmp(type2, "float")) {
         return 6;
     }
+
+    if (type2 == NULL) {
+
+        if (strcmp(type1, "int") == 0 || 
+            strcmp(type1, "float") == 0 ||
+            strcmp(type1, "char") == 0 ||
+            strcmp(type1, "void") == 0) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
 }
 
 char *get_type(char *var) {
@@ -496,7 +594,7 @@ char *get_type(char *var) {
             return symbolTable[i].data_type;
         }
     }
-    // Retorna um tipo "desconhecido" para indicar erro
+
     return "desconhecido";
 }
 
@@ -509,6 +607,14 @@ void add(char c) {
                 return;
             }
         }
+    }
+
+    if (c == 'V' && yylval.nd_obj2.nd != NULL && strcmp(yylval.nd_obj2.nd->token, "array_declaration") == 0) { 
+        symbolTable[count].id_name = strdup(yylval.nd_obj.name); 
+        symbolTable[count].data_type = strdup(type);
+        symbolTable[count].line_no = countn;
+        symbolTable[count].type = strdup("array");
+        count++;
     }
 
     q = search(yytext);
@@ -592,6 +698,10 @@ void insert_type() {
 }
 
 void yyerror(const char *s) {
-    fprintf(stderr, "\nErro na linha %d: %s\n", yylineno, s);
+    report_error(s);
     exit(1);
+}
+
+void report_error(const char *type, const char *msg) {
+    fprintf(stderr, "Erro! %s (linha %d): %s\n", type, yylineno, msg); 
 }
