@@ -16,6 +16,7 @@ unary "++"|"--"
 
 %%
 
+"principal"                 { print_token("MAIN", yytext); strcpy(yylval.nd_obj.name,(yytext)); return MAIN; }
 "imprimir"                  { print_token("PRINTF", yytext); strcpy(yylval.nd_obj.name,(yytext)); return PRINTF; }
 "ler"                       { print_token("SCANF", yytext); strcpy(yylval.nd_obj.name,(yytext)); return SCANF; }
 "inteiro"                   { print_token("INT", yytext); strcpy(yylval.nd_obj.name,(yytext)); return INT; }
