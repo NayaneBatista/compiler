@@ -7,8 +7,6 @@
 
     void yyerror(const char *s);
     int yylex();
-    int yywrap();
-    void add(char);
     void insert_type();
     int search(char *);
     void insert_type();
@@ -64,8 +62,8 @@
 }
 
 %token VOID
-%token <nd_obj> CHARACTER PRINTF SCANF INT FLOAT CHAR FOR IF ELSE TRUE FALSE NUMBER FLOAT_NUMBER ID LE GE EQ NE GT LT STRING ADD MULTIPLY DIVIDE SUBTRACT UNARY INCLUDE RETURN
-%type <nd_obj> headers main body return datatype statement arithmetic relop program condition else array_declaration function_declaration parameter_list
+%token <nd_obj> CHARACTER MAIN PRINTF SCANF INT FLOAT CHAR FOR IF ELSE TRUE FALSE NUMBER FLOAT_NUMBER ID LE GE EQ NE GT LT STRING ADD MULTIPLY DIVIDE SUBTRACT UNARY INCLUDE RETURN
+%type <nd_obj> headers main body return datatype statement arithmetic relop program condition else array_declaration
 %type <nd_obj2> init value expression
 
 %%
@@ -80,11 +78,11 @@ program:
 
 headers:
     INCLUDE {
-        add('H');
+        add('H', $1.name, "header", countn);
         $$.nd = mknode(NULL, NULL, $1.name);
     }
     | headers INCLUDE {
-        add('H');
+        add('H', $2.name, "header", countn);
         $2.nd = mknode(NULL, NULL, $2.name);
         $$.nd = mknode($1.nd, $2.nd, "headers");
     }
@@ -94,8 +92,8 @@ headers:
 ;
 
 main:
-    datatype ID {
-        add('F');
+    datatype MAIN  {
+        add('F', $2.name, $1.name, countn);
     }
 ;
 
@@ -116,19 +114,24 @@ datatype:
 
 body:
     FOR {
-        add('K');
+        add('K', $1.name, "Keyword", countn);
     } '(' statement ';' condition ';' statement ')' '{' body '}' {
         struct node *temp = mknode($6.nd, $8.nd, "CONDICAO");
         struct node *temp2 = mknode($4.nd, temp, "CONDICAO");
         $$.nd = mknode(temp2, $11.nd, $1.name);
     }
     | IF {
-        add('K');
+        add('K', $1.name, "Keyword", countn);
     } '(' condition ')' '{' body '}' else {
         struct node *iff = mknode($4.nd, $7.nd, $1.name);
         $$.nd = mknode(iff, $9.nd, "se-senao");
     }
-    | function_declaration
+    /* | function_declaration {
+        $$.nd = $1.nd;
+    }
+    | array_declaration {
+        $$.nd = $1.nd;
+    } */
     | statement ';' {
         $$.nd = $1.nd;
     }
@@ -136,12 +139,12 @@ body:
         $$.nd = mknode($1.nd, $2.nd, "statements");
     }
     | PRINTF {
-        add('K');
+        add('K', $1.name, "Keyword", countn);
     } '(' STRING ')' ';' {
         $$.nd = mknode(NULL, NULL, "imprimir");
     }
     | SCANF {
-        add('K');
+        add('K', $1.name, "Keyword", countn);
     } '(' STRING ',' '&' ID ')' ';' {
         $$.nd = mknode(NULL, NULL, "ler");
     }
@@ -149,7 +152,7 @@ body:
 
 else:
     ELSE {
-        add('K');
+        add('K', $1.name, "Keyword", countn);
     } '{' body '}' {
         $$.nd = mknode(NULL, $4.nd, $1.name);
     }
@@ -163,11 +166,11 @@ condition:
         $$.nd = mknode($1.nd, $3.nd, $2.name);
     }
     | TRUE {
-        add('K');
+        add('K', $1.name, "Keyword", countn);
         $$.nd = NULL;
     }
     | FALSE {
-        add('K');
+        add('K', $1.name, "Keyword", countn);
         $$.nd = NULL;
     }
     | {
@@ -175,28 +178,9 @@ condition:
     }
 ;
 
-function_declaration:
-    datatype ID '(' parameter_list ')' '{' body '}' { 
-        if (!check_data_type($2.nd)) {
-        }
-        $$.nd = mknode($2.nd, $7.nd, $2.name); 
-    }
-    | VOID ID '(' parameter_list ')' '{' body '}' { 
-        if (!check_data_type($2.nd)) {
-        }
-
-        $$.nd = mknode($2.nd, $7.nd, $2.name); 
-    }
-;
-
-parameter_list:
-    datatype ID
-    | parameter_list ',' datatype ID
-;
-
 array_declaration:
     datatype ID '[' NUMBER ']' { 
-        add('V');
+        add('Y', $2.name, $1.name, countn);
         $1.nd = mknode(NULL, NULL, $1.name);
         $$.nd = mknode($1.nd, $2.nd, "array_declaration"); 
     }
@@ -204,7 +188,8 @@ array_declaration:
 
 statement:
     datatype ID {
-        add('V');
+        add('V', $2.name, $1.name, countn);
+
     } init {
         $2.nd = mknode(NULL, NULL, $2.name);
 
@@ -242,7 +227,6 @@ statement:
     }
     | array_declaration init {
         $2.nd = mknode(NULL, NULL, $2.name);
-
         int t = check_types($1.name, $2.type);
 
         if (t > 0) {
@@ -336,14 +320,6 @@ statement:
         $2.nd = mknode(NULL, NULL, $2.name);
         $$.nd = mknode($1.nd, $2.nd, "ITERATOR");
     }
-    | ID '(' parameter_list ')' {
-        char *id_type = get_type($1.name);
-        if (strcmp(id_type, "desconhecido") == 0) {
-            sprintf(errors[sem_errors], "Linha %d: Funcao \"%s\" nao declarada antes do uso!\n", countn + 1, $1.name);
-            sem_errors++;
-        }
-        $$.nd = mknode($1.nd, $3.nd, "chamada_funcao");
-    }
 ;
 
 init:
@@ -425,19 +401,19 @@ value:
     NUMBER {
         strcpy($$.name, $1.name);
         sprintf($$.type, "inteiro");
-        add('C');
+        add('C', $1.name, "CONST", countn);
         $$.nd = mknode(NULL, NULL, $1.name);
     }
     | FLOAT_NUMBER {
         strcpy($$.name, $1.name);
         sprintf($$.type, "flutuante");
-        add('C');
+        add('C', $1.name, "CONST", countn);
         $$.nd = mknode(NULL, NULL, $1.name);
     }
     | CHARACTER {
         strcpy($$.name, $1.name);
         sprintf($$.type, "caractere");
-        add('C');
+        add('C', $1.name, "CONST", countn);
         $$.nd = mknode(NULL, NULL, $1.name);
     }
     | ID {
@@ -455,7 +431,7 @@ value:
 
 return:
     RETURN {
-        add('K');
+        add('K', $1.name, "Keyword", countn);
     } value ';' {
         check_return_type($3.name);
         $1.nd = mknode(NULL, NULL, "return");
@@ -601,56 +577,54 @@ char *get_type(char *var) {
     return "desconhecido";
 }
 
-void add(char c) {
+void add(char c, char *nome, char *tipo, int linha) {
     if (c == 'V') {
         for (int i = 0; i < 10; i++) {
             if (!strcmp(reserved[i], strdup(yytext))) {
-                sprintf(errors[sem_errors], "Linha %d: Nome da variavel \"%s\" eh uma palavra reservada!\n", countn + 1, yytext);
+                sprintf(errors[sem_errors], "Linha %d: Nome da variavel \"%s\" eh uma palavra reservada!\n", linha + 1, nome);
                 sem_errors++;
                 return;
             }
         }
     }
 
-    if (c == 'V' && yylval.nd_obj2.nd != NULL && strcmp(yylval.nd_obj2.nd->token, "array_declaration") == 0) { 
-        symbolTable[count].id_name = strdup(yylval.nd_obj.name); 
-        symbolTable[count].data_type = strdup(type);
-        symbolTable[count].line_no = countn;
-        symbolTable[count].type = strdup("array");
-        count++;
-    }
-
     q = search(yytext);
     if (q == 0) {
         if (c == 'H') {
-            symbolTable[count].id_name = strdup(yytext);
-            symbolTable[count].data_type = strdup(type);
-            symbolTable[count].line_no = countn;
+            symbolTable[count].id_name = strdup(nome);
+            symbolTable[count].data_type = strdup(tipo);
+            symbolTable[count].line_no = linha;
             symbolTable[count].type = strdup("Header");
             count++;
         } else if (c == 'K') {
-            symbolTable[count].id_name = strdup(yytext);
+            symbolTable[count].id_name = strdup(nome);
             symbolTable[count].data_type = strdup("N/A");
-            symbolTable[count].line_no = countn;
+            symbolTable[count].line_no = linha;
             symbolTable[count].type = strdup("Palavra-chave");
             count++;
         } else if (c == 'V') {
-            symbolTable[count].id_name = strdup(yytext);
-            symbolTable[count].data_type = strdup(type);
-            symbolTable[count].line_no = countn;
+            symbolTable[count].id_name = strdup(nome);
+            symbolTable[count].data_type = strdup(tipo);
+            symbolTable[count].line_no = linha;
             symbolTable[count].type = strdup("Variável");
             count++;
         } else if (c == 'C') {
-            symbolTable[count].id_name = strdup(yytext);
-            symbolTable[count].data_type = strdup("CONST");
-            symbolTable[count].line_no = countn;
+            symbolTable[count].id_name = strdup(nome);
+            symbolTable[count].data_type = strdup(tipo);
+            symbolTable[count].line_no = linha;
             symbolTable[count].type = strdup("Constante");
             count++;
         } else if (c == 'F') {
-            symbolTable[count].id_name = strdup(yytext);
-            symbolTable[count].data_type = strdup(type);
-            symbolTable[count].line_no = countn;
+            symbolTable[count].id_name = strdup(nome);
+            symbolTable[count].data_type = strdup(tipo);
+            symbolTable[count].line_no = linha;
             symbolTable[count].type = strdup("Function");
+            count++;
+        } else if (c == 'Y') {
+            symbolTable[count].id_name = strdup(nome);
+            symbolTable[count].data_type = strdup(tipo);
+            symbolTable[count].line_no = linha;
+            symbolTable[count].type = strdup("Array");
             count++;
         }
     }
