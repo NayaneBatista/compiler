@@ -1,4 +1,9 @@
+vazio soma() {
+    imprimir("salve");
+}
+
 inteiro principal() {
+    soma();
     inteiro a;
     inteiro x=1;
     inteiro y=2;
