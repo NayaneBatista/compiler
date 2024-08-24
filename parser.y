@@ -63,15 +63,14 @@
 
 %token VOID
 %token <nd_obj> CHARACTER MAIN PRINTF SCANF INT FLOAT CHAR FOR IF ELSE TRUE FALSE NUMBER FLOAT_NUMBER ID LE GE EQ NE GT LT STRING ADD MULTIPLY DIVIDE SUBTRACT UNARY INCLUDE RETURN
-%type <nd_obj> headers main body return datatype statement arithmetic relop program condition else array_declaration
+%type <nd_obj> headers main body return datatype statement arithmetic relop program condition else array_declaration main_declaration function_name function_list function_declaration function_call parameter_list arguments_list
 %type <nd_obj2> init value expression
 
 %%
 
 program:
-    headers main '(' ')' '{' body return '}' {
-        $2.nd = mknode($6.nd, $7.nd, "principal");
-        $$.nd = mknode($1.nd, $2.nd, "programa");
+    headers function_list {
+        $$.nd = mknode($1.nd, $2.nd, "program");
         head = $$.nd;
     }
 ;
@@ -92,8 +91,71 @@ headers:
 ;
 
 main:
-    datatype MAIN  {
+    main_declaration '{' body return '}' 
+;
+
+main_declaration: 
+    datatype MAIN '(' ')' {
+        add('F', "principal", $1.name, countn);
+        $$.nd = mknode($1.nd, $2.nd, "principal");
+    }
+
+function_list:
+    function_declaration {
+        $$.nd = $1.nd;
+    }
+    | function_list function_declaration {
+        $$.nd = mknode($1.nd, $2.nd, "function_list");
+    }
+
+function_declaration:
+    function_name '{' body return '}' {
+        $$.nd = mknode($1.nd, $3.nd, "function_declaration");
+    }
+    | main {
+        $$.nd = $1.nd;
+    }
+;
+
+function_name:
+    datatype ID '(' parameter_list ')' {
         add('F', $2.name, $1.name, countn);
+        $$.nd = mknode($1.nd, $4.nd, $2.name);
+    }
+;
+
+parameter_list:
+     datatype ID {
+        add('V', $2.name, $1.name, countn);
+    }
+    | parameter_list ',' datatype ID {
+        add('V', $4.name, $3.name, countn);
+    }
+    | {
+        $$.nd = NULL;
+    }
+;
+
+function_call:
+    ID '(' ')' {
+        check_declaration($1.name);
+        $$.nd = mknode(NULL, NULL, $1.name);
+    }
+    | ID '(' arguments_list ')' {
+        check_declaration($1.name);
+        $$.nd = mknode(NULL, $3.nd, $1.name);
+    }
+;
+
+arguments_list:
+    value {
+        $$.nd = mknode(NULL, NULL, $1.name);
+    }
+    | arguments_list ',' value {
+        $$.nd = mknode($1.nd, $3.nd, "arguments_list");
+    }
+    | {
+        $$.nd = NULL;
     }
 ;
 
@@ -115,6 +177,7 @@ datatype:
 body:
     FOR {
         add('K', $1.name, "Keyword", countn);
+        // printf("FORRRRRRRRRRRRRRRRRR %s\n", $1.name);
     } '(' statement ';' condition ';' statement ')' '{' body '}' {
         struct node *temp = mknode($6.nd, $8.nd, "CONDICAO");
         struct node *temp2 = mknode($4.nd, temp, "CONDICAO");
@@ -132,6 +195,9 @@ body:
     | array_declaration {
         $$.nd = $1.nd;
     } */
+    | function_call ';' {
+        $$.nd = $1.nd;
+    }
     | statement ';' {
         $$.nd = $1.nd;
     }
@@ -675,7 +741,8 @@ void insert_type() {
 }
 
 void yyerror(const char *s) {
-    report_error(s);
+    report_error(s, "Erro de sintaxe");
+    fprintf(stderr, "Erro! %s (linha %d)\n", s, yylineno);
     exit(1);
 }
 
