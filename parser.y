@@ -91,13 +91,14 @@ headers:
 ;
 
 main:
-    main_declaration '{' body return '}' 
+    main_declaration '{' body return '}' {
+        $$.nd = mknode($1.nd, $3.nd, "principal");
+    }
 ;
 
 main_declaration: 
     datatype MAIN '(' ')' {
         add('F', "principal", $1.name, countn);
-        $$.nd = mknode($1.nd, $2.nd, "principal");
     }
 
 function_list:
