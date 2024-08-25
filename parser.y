@@ -126,7 +126,7 @@ function_name:
 ;
 
 parameter_list:
-     datatype ID {
+    datatype ID {
         add('V', $2.name, $1.name, countn);
     }
     | parameter_list ',' datatype ID {
@@ -178,7 +178,6 @@ datatype:
 body:
     FOR {
         add('K', $1.name, "Keyword", countn);
-        // printf("FORRRRRRRRRRRRRRRRRR %s\n", $1.name);
     } '(' statement ';' condition ';' statement ')' '{' body '}' {
         struct node *temp = mknode($6.nd, $8.nd, "CONDICAO");
         struct node *temp2 = mknode($4.nd, temp, "CONDICAO");
@@ -190,12 +189,6 @@ body:
         struct node *iff = mknode($4.nd, $7.nd, $1.name);
         $$.nd = mknode(iff, $9.nd, "se-senao");
     }
-    /* | function_declaration {
-        $$.nd = $1.nd;
-    }
-    | array_declaration {
-        $$.nd = $1.nd;
-    } */
     | function_call ';' {
         $$.nd = $1.nd;
     }
@@ -521,8 +514,8 @@ int main() {
     int i = 0;
     for (i = 0; i < count; i++) {
         printf("%-20s\t%-20s\t%-20s\t%5d\t\n",
-               symbolTable[i].id_name, symbolTable[i].data_type,
-               symbolTable[i].type, symbolTable[i].line_no + 1);
+            symbolTable[i].id_name, symbolTable[i].data_type,
+            symbolTable[i].type, symbolTable[i].line_no + 1);
     }
     for (i = 0; i < count; i++) {
         free(symbolTable[i].id_name);
